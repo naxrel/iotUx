@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 
 interface MapComponentProps {
   latitude: number;
@@ -9,7 +9,7 @@ interface MapComponentProps {
   lastStatus?: string;
 }
 
-// Native map component - uses react-native-maps (iOS/Android only)
+// Native map component - uses CartoDB OSM tiles (free, no auth required)
 export const MapComponent: React.FC<MapComponentProps> = ({
   latitude,
   longitude,
@@ -18,7 +18,6 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
   return (
     <MapView
-      provider={PROVIDER_DEFAULT}
       style={styles.map}
       region={{
         latitude,
@@ -29,6 +28,12 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       showsUserLocation={false}
       showsMyLocationButton={false}
     >
+      <UrlTile
+        urlTemplate="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+        maximumZ={19}
+        flipY={false}
+        subdomains={['a', 'b', 'c', 'd']}
+      />
       <Marker
         coordinate={{
           latitude,
