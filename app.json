@@ -1,5 +1,8 @@
 {
   "expo": {
+    "name": "TrackTard",
+    "slug": "iotux",
+    "icon": "./assets/icon.png",
     "scheme": "iotux",
     "extra": {
       "eas": {
@@ -7,7 +10,11 @@
       }
     },
     "android": {
-      "package": "com.umbrosa.iotux"
+      "package": "com.umbrosa.iotux",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
     }
   }
 }
