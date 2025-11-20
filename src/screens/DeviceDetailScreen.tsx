@@ -100,8 +100,18 @@ export default function DeviceDetailScreen() {
   };
 
   const handleArmToggle = async (shouldArm: boolean) => {
-    const command = shouldArm ? 'ARM' : 'DISARM';
-    await sendCommand(command);
+    if (!deviceId) return;
+    setSending('toggle');
+    try {
+      const response = await deviceAPI.toggleArmedState(deviceId);
+      Alert.alert('Success', `Device ${response.armed_state === 'armed' ? 'ARMED' : 'DISARMED'}`);
+      // Refresh the device status to update UI
+      await loadData();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to toggle armed state');
+    } finally {
+      setSending(null);
+    }
   };
 
   const loadMoreAlerts = () => {

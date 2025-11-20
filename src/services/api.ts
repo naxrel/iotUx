@@ -179,6 +179,11 @@ export const deviceAPI = {
     return response.data;
   },
 
+  toggleArmedState: async (deviceId: string): Promise<{ device_id: string; armed_state: string }> => {
+    const response = await api.post<{ device_id: string; armed_state: string }>(`/devices/${deviceId}/toggle`);
+    return response.data;
+  },
+
   sendCommand: async (deviceId: string, command: string, value?: string): Promise<any> => {
     const response = await api.post(`/api/send/${deviceId}`, { command, value });
     return response.data;
