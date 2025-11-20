@@ -92,6 +92,7 @@ export interface DeviceStatus {
 export interface DeviceCurrentStatus extends DeviceStatus {
   name: string; // Added name here
   last_status: string | null;
+  armed_state: string | null; // "armed" or "disarmed"
   lat: number | null;
   lon: number | null;
 }

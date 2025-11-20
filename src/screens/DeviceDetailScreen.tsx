@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -35,6 +35,7 @@ export default function DeviceDetailScreen() {
   const [sending, setSending] = useState<string | null>(null);
   const [alertsPage, setAlertsPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const isTogglingRef = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!deviceId) {
@@ -50,7 +51,8 @@ export default function DeviceDetailScreen() {
       ]);
 
       // Ensure data is valid before setting state
-      if (statusData) {
+      // Skip update if we're in the middle of toggling (keep optimistic update)
+      if (statusData && !isTogglingRef.current) {
         setDeviceStatus(statusData);
       }
       if (Array.isArray(alertsData)) {
@@ -101,14 +103,31 @@ export default function DeviceDetailScreen() {
 
   const handleArmToggle = async (shouldArm: boolean) => {
     if (!deviceId) return;
+    const command = shouldArm ? 'ARM' : 'DISARM';
     setSending('toggle');
+    isTogglingRef.current = true;
+    
+    // Optimistic update - update UI immediately
+    if (deviceStatus) {
+      setDeviceStatus({
+        ...deviceStatus,
+        armed_state: shouldArm ? 'armed' : 'disarmed',
+      });
+    }
+    
     try {
-      const response = await deviceAPI.toggleArmedState(deviceId);
-      Alert.alert('Success', `Device ${response.armed_state === 'armed' ? 'ARMED' : 'DISARMED'}`);
-      // Refresh the device status to update UI
-      await loadData();
+      // Send the ARM/DISARM command using the existing endpoint
+      await deviceAPI.sendCommand(deviceId, command);
+      Alert.alert('Success', `Device ${shouldArm ? 'ARMED' : 'DISARMED'}`);
+      // Wait for backend to process, then allow refresh
+      setTimeout(() => {
+        isTogglingRef.current = false;
+      }, 1000);
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.detail || 'Failed to toggle armed state');
+      // Revert optimistic update on error
+      isTogglingRef.current = false;
+      await loadData();
     } finally {
       setSending(null);
     }
@@ -223,10 +242,10 @@ export default function DeviceDetailScreen() {
         <Card style={styles.controlCard}>
           <Text style={styles.cardTitle}>System Security</Text>
           <CircleToggle
-            isArmed={deviceStatus?.last_status === 'ARMED'}
+            isArmed={deviceStatus?.armed_state === 'armed'}
             onToggle={handleArmToggle}
             disabled={!isDeviceOnline}
-            loading={sending === 'ARM' || sending === 'DISARM'}
+            loading={sending === 'toggle'}
           />
         </Card>
 
