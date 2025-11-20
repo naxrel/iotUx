@@ -1,5 +1,5 @@
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { API_BASE_URL } from '../constants/theme';
 
 const AUTH_TOKEN_KEY = '@iotux_auth_token';
@@ -92,6 +92,7 @@ export interface DeviceStatus {
 export interface DeviceCurrentStatus extends DeviceStatus {
   name: string; // Added name here
   last_status: string | null;
+  armed_state: string | null; // "armed" or "disarmed"
   lat: number | null;
   lon: number | null;
 }
@@ -176,6 +177,11 @@ export const deviceAPI = {
 
   getDeviceAlerts: async (deviceId: string): Promise<Alert[]> => {
     const response = await api.get<Alert[]>(`/api/devices/${deviceId}/alerts`);
+    return response.data;
+  },
+
+  toggleArmedState: async (deviceId: string): Promise<{ device_id: string; armed_state: string }> => {
+    const response = await api.post<{ device_id: string; armed_state: string }>(`/devices/${deviceId}/toggle`);
     return response.data;
   },
 

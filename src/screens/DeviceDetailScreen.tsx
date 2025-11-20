@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  RefreshControl,
-  Dimensions,
-  ActivityIndicator,
-} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Card } from '../components/common/Card';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { Button } from '../components/common/Button';
+import { Card } from '../components/common/Card';
+import { CircleToggle } from '../components/common/CircleToggle';
 import { MapComponent } from '../components/common/MapComponent';
-import { deviceAPI, DeviceCurrentStatus, Alert as DeviceAlert } from '../services/api';
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '../constants/theme';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING } from '../constants/theme';
+import { Alert as DeviceAlert, deviceAPI, DeviceCurrentStatus } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +35,7 @@ export default function DeviceDetailScreen() {
   const [sending, setSending] = useState<string | null>(null);
   const [alertsPage, setAlertsPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const isTogglingRef = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!deviceId) {
@@ -49,7 +51,8 @@ export default function DeviceDetailScreen() {
       ]);
 
       // Ensure data is valid before setting state
-      if (statusData) {
+      // Skip update if we're in the middle of toggling (keep optimistic update)
+      if (statusData && !isTogglingRef.current) {
         setDeviceStatus(statusData);
       }
       if (Array.isArray(alertsData)) {
@@ -93,6 +96,38 @@ export default function DeviceDetailScreen() {
       Alert.alert('Success', `Command "${command}" sent successfully`);
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.detail || 'Failed to send command');
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const handleArmToggle = async (shouldArm: boolean) => {
+    if (!deviceId) return;
+    const command = shouldArm ? 'ARM' : 'DISARM';
+    setSending('toggle');
+    isTogglingRef.current = true;
+    
+    // Optimistic update - update UI immediately
+    if (deviceStatus) {
+      setDeviceStatus({
+        ...deviceStatus,
+        armed_state: shouldArm ? 'armed' : 'disarmed',
+      });
+    }
+    
+    try {
+      // Send the ARM/DISARM command using the existing endpoint
+      await deviceAPI.sendCommand(deviceId, command);
+      Alert.alert('Success', `Device ${shouldArm ? 'ARMED' : 'DISARMED'}`);
+      // Wait for backend to process, then allow refresh
+      setTimeout(() => {
+        isTogglingRef.current = false;
+      }, 1000);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to toggle armed state');
+      // Revert optimistic update on error
+      isTogglingRef.current = false;
+      await loadData();
     } finally {
       setSending(null);
     }
@@ -203,9 +238,20 @@ export default function DeviceDetailScreen() {
           </Card>
         )}
 
-        {/* Control Buttons */}
+        {/* Arm/Disarm Toggle */}
+        <Card style={styles.controlCard}>
+          <Text style={styles.cardTitle}>System Security</Text>
+          <CircleToggle
+            isArmed={deviceStatus?.armed_state === 'armed'}
+            onToggle={handleArmToggle}
+            disabled={!isDeviceOnline}
+            loading={sending === 'toggle'}
+          />
+        </Card>
+
+        {/* Other Control Buttons */}
         <Card style={[styles.controlCard, !isDeviceOnline && styles.disabledCard].filter(Boolean) as any}>
-          <Text style={styles.cardTitle}>Controls</Text>
+          <Text style={styles.cardTitle}>Device Controls</Text>
           <View style={styles.controlGrid}>
             <Button
               title="Buzz Alarm"
@@ -222,24 +268,6 @@ export default function DeviceDetailScreen() {
               loading={sending === 'REQUEST_POSITION'}
               disabled={!isDeviceOnline}
               variant="secondary"
-              size="medium"
-              style={[styles.controlButton, !isDeviceOnline && styles.disabledButton].filter(Boolean) as any}
-            />
-            <Button
-              title="Arm System"
-              onPress={() => sendCommand('ARM')}
-              loading={sending === 'ARM'}
-              disabled={!isDeviceOnline}
-              variant="primary"
-              size="medium"
-              style={[styles.controlButton, !isDeviceOnline && styles.disabledButton].filter(Boolean) as any}
-            />
-            <Button
-              title="Disarm System"
-              onPress={() => sendCommand('DISARM')}
-              loading={sending === 'DISARM'}
-              disabled={!isDeviceOnline}
-              variant="outline"
               size="medium"
               style={[styles.controlButton, !isDeviceOnline && styles.disabledButton].filter(Boolean) as any}
             />

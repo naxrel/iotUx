@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { StyleSheet, View } from 'react-native';
+import { LeafletMap } from './LeafletMap';
 
 interface MapComponentProps {
   latitude: number;
@@ -9,7 +9,7 @@ interface MapComponentProps {
   lastStatus?: string;
 }
 
-// Native map component - uses react-native-maps (iOS/Android only)
+// Leaflet-based map component - WebView with OSM tiles (no Google SDK!)
 export const MapComponent: React.FC<MapComponentProps> = ({
   latitude,
   longitude,
@@ -17,27 +17,15 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   lastStatus,
 }) => {
   return (
-    <MapView
-      provider={PROVIDER_DEFAULT}
-      style={styles.map}
-      region={{
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }}
-      showsUserLocation={false}
-      showsMyLocationButton={false}
-    >
-      <Marker
-        coordinate={{
-          latitude,
-          longitude,
-        }}
-        title={deviceId}
-        description={lastStatus || 'Device location'}
+    <View style={styles.map}>
+      <LeafletMap
+        latitude={latitude}
+        longitude={longitude}
+        deviceId={deviceId}
+        lastStatus={lastStatus}
+        zoom={15}
       />
-    </MapView>
+    </View>
   );
 };
 

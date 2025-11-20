@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
-import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { COLORS, SPACING } from '../../constants/theme';
 
 interface MapComponentProps {
   latitude: number;
@@ -12,7 +12,7 @@ interface MapComponentProps {
 // Web fallback component - NO react-native-maps import
 export const MapComponent: React.FC<MapComponentProps> = ({ latitude, longitude }) => {
   const openInMaps = () => {
-    const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    const url = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}&zoom=15`;
     Linking.openURL(url);
   };
 
@@ -26,7 +26,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ latitude, longitude 
         Longitude: {longitude.toFixed(6)}
       </Text>
       <TouchableOpacity onPress={openInMaps} style={styles.mapButton}>
-        <Text style={styles.mapButtonText}>Open in Google Maps →</Text>
+        <Text style={styles.mapButtonText}>Open in OpenStreetMap →</Text>
       </TouchableOpacity>
     </View>
   );
