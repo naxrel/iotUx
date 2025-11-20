@@ -22,6 +22,12 @@ import { Alert as DeviceAlert, deviceAPI, DeviceCurrentStatus } from '../service
 
 const { width } = Dimensions.get('window');
 
+interface LastValidLocation {
+  lat: number;
+  lon: number;
+  timestamp: Date;
+}
+
 export default function DeviceDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -35,6 +41,7 @@ export default function DeviceDetailScreen() {
   const [sending, setSending] = useState<string | null>(null);
   const [alertsPage, setAlertsPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [lastValidLocation, setLastValidLocation] = useState<LastValidLocation | null>(null);
   const isTogglingRef = useRef(false);
 
   const loadData = useCallback(async () => {
@@ -54,6 +61,16 @@ export default function DeviceDetailScreen() {
       // Skip update if we're in the middle of toggling (keep optimistic update)
       if (statusData && !isTogglingRef.current) {
         setDeviceStatus(statusData);
+        
+        // Update last valid location if we have valid coordinates
+        if (statusData.lat != null && statusData.lon != null && 
+            !(statusData.lat === 0 && statusData.lon === 0)) {
+          setLastValidLocation({
+            lat: statusData.lat,
+            lon: statusData.lon,
+            timestamp: new Date(),
+          });
+        }
       }
       if (Array.isArray(alertsData)) {
         setAlerts([...alertsData].reverse()); // Show newest first safely
@@ -153,6 +170,36 @@ export default function DeviceDetailScreen() {
     return date.toLocaleString();
   };
 
+  const formatLocationTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSeconds < 60) {
+      return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+  };
+
+  // Determine which coordinates to display
+  const hasCurrentLocation = deviceStatus && deviceStatus.lat != null && 
+                            deviceStatus.lon != null && 
+                            !(deviceStatus.lat === 0 && deviceStatus.lon === 0);
+  
+  const displayLocation = hasCurrentLocation 
+    ? { lat: deviceStatus.lat!, lon: deviceStatus.lon!, isCurrent: true }
+    : lastValidLocation 
+    ? { lat: lastValidLocation.lat, lon: lastValidLocation.lon, isCurrent: false, timestamp: lastValidLocation.timestamp }
+    : null;
+
   if (loading && !refreshing) {
     return (
       <View style={[styles.container, styles.centerContent]}>
@@ -218,26 +265,29 @@ export default function DeviceDetailScreen() {
         </Card>
 
         {/* Map Card */}
-        {deviceStatus && deviceStatus.lat != null && deviceStatus.lon != null && !(deviceStatus.lat === 0 && deviceStatus.lon === 0) ? (
+        {displayLocation ? (
           <Card style={styles.mapCard} padding={0}>
             <MapComponent
-              latitude={deviceStatus.lat}
-              longitude={deviceStatus.lon}
+              latitude={displayLocation.lat}
+              longitude={displayLocation.lon}
               deviceId={deviceId || ''}
-              lastStatus={deviceStatus.last_status || undefined}
+              lastStatus={deviceStatus?.last_status || undefined}
             />
             <View style={styles.mapOverlay}>
               <Text style={styles.coordinates}>
-                📍 {deviceStatus.lat.toFixed(6)}, {deviceStatus.lon.toFixed(6)}
+                📍 {displayLocation.lat.toFixed(6)}, {displayLocation.lon.toFixed(6)}
               </Text>
+              {!displayLocation.isCurrent && displayLocation.timestamp && (
+                <Text style={styles.lastLocationTime}>
+                  ⏱️ Last known location from {formatLocationTime(displayLocation.timestamp)}
+                </Text>
+              )}
             </View>
           </Card>
         ) : (
           <Card style={styles.mapCard}>
             <Text style={styles.noLocation}>
-              {deviceStatus && deviceStatus.lat === 0 && deviceStatus.lon === 0 
-                ? 'Location unavailable, Searching for GPS' 
-                : 'No location data available'}
+              No location data available yet
             </Text>
           </Card>
         )}
@@ -411,6 +461,14 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  lastLocationTime: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: SPACING.xs / 2,
+    opacity: 0.9,
   },
   controlCard: {
     marginBottom: SPACING.md,
