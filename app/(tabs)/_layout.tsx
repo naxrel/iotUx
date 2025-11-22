@@ -1,8 +1,9 @@
 import { Tabs, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Text } from 'react-native';
-import { COLORS, FONT_SIZES } from '../../src/constants/theme';
+import { COLORS, FONT_SIZES, getThemedColors } from '../../src/constants/theme';
 import { authAPI } from '../../src/services/api';
+import { useTheme } from '../../src/contexts/ThemeContext';
 
 function TabIcon({ icon }: { icon: string }) {
   return <Text style={{ fontSize: 24 }}>{icon}</Text>;
@@ -10,6 +11,8 @@ function TabIcon({ icon }: { icon: string }) {
 
 export default function TabLayout() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const themedColors = getThemedColors(isDark);
 
   useEffect(() => {
     let mounted = true;
@@ -33,18 +36,21 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.gray400,
+        tabBarInactiveTintColor: isDark ? COLORS.gray400 : COLORS.gray600,
         tabBarStyle: {
-          backgroundColor: COLORS.white,
+          backgroundColor: isDark ? 'rgba(20, 20, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
           borderTopWidth: 1,
-          borderTopColor: COLORS.gray200,
+          borderTopColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
           paddingBottom: 8,
           paddingTop: 8,
           height: 60,
+          position: 'absolute',
+          backdropFilter: 'blur(10px)',
         },
         tabBarLabelStyle: {
           fontSize: FONT_SIZES.xs,
           fontWeight: '600',
+          color: themedColors.text,
         },
       }}
     >
@@ -62,6 +68,15 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: () => <TabIcon icon="📊" />,
+        }}
+      />
+      
+      {/* Settings tab */}
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: () => <TabIcon icon="⚙️" />,
         }}
       />
       

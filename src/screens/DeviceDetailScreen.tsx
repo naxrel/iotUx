@@ -17,10 +17,9 @@ import { Card } from '../components/common/Card';
 import { CircleToggle } from '../components/common/CircleToggle';
 import { MapComponent } from '../components/common/MapComponent';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING } from '../constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, getThemedColors } from '../constants/theme';
 import { Alert as DeviceAlert, deviceAPI, DeviceCurrentStatus } from '../services/api';
-
-const { width } = Dimensions.get('window');
+import { useTheme } from '../contexts/ThemeContext';const { width } = Dimensions.get('window');
 
 interface LastValidLocation {
   lat: number;
@@ -31,6 +30,8 @@ interface LastValidLocation {
 export default function DeviceDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { isDark } = useTheme();
+  const themedColors = getThemedColors(isDark);
   // Safely get deviceId, handle array case
   const deviceId = Array.isArray(params.deviceId) ? params.deviceId[0] : params.deviceId;
 
@@ -221,8 +222,8 @@ export default function DeviceDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { backgroundColor: themedColors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -244,12 +245,12 @@ export default function DeviceDetailScreen() {
         {/* Device Info Card */}
         <Card style={styles.infoCard}>
           <View style={styles.deviceHeader}>
-            <Text style={styles.deviceName}>{deviceStatus?.name || deviceId}</Text>
+            <Text style={[styles.deviceName, { color: themedColors.text }]}>{deviceStatus?.name || deviceId}</Text>
           </View>
           {!!deviceStatus?.last_status && (
-            <Text style={styles.lastStatus}>Status: {deviceStatus.last_status}</Text>
+            <Text style={[styles.lastStatus, { color: themedColors.textSecondary }]}>Status: {deviceStatus.last_status}</Text>
           )}
-          <Text style={[styles.lastSeen, !isDeviceOnline && styles.offlineText]}>
+          <Text style={[styles.lastSeen, { color: themedColors.textSecondary }, !isDeviceOnline && styles.offlineText]}>
             Last seen: {lastSeenText}
           </Text>
           
@@ -257,7 +258,7 @@ export default function DeviceDetailScreen() {
           {!isDeviceOnline && (
             <View style={styles.offlineWarning}>
               <Text style={styles.offlineWarningIcon}>⚠️</Text>
-              <Text style={styles.offlineWarningText}>
+              <Text style={[styles.offlineWarningText, { color: themedColors.textSecondary }]}>
                 Device is offline. Controls are disabled.
               </Text>
             </View>
@@ -274,11 +275,11 @@ export default function DeviceDetailScreen() {
               lastStatus={deviceStatus?.last_status || undefined}
             />
             <View style={styles.mapOverlay}>
-              <Text style={styles.coordinates}>
+              <Text style={[styles.coordinates, { color: themedColors.text }]}>
                 📍 {displayLocation.lat.toFixed(6)}, {displayLocation.lon.toFixed(6)}
               </Text>
               {!displayLocation.isCurrent && displayLocation.timestamp && (
-                <Text style={styles.lastLocationTime}>
+                <Text style={[styles.lastLocationTime, { color: themedColors.textSecondary }]}>
                   ⏱️ Last known location from {formatLocationTime(displayLocation.timestamp)}
                 </Text>
               )}
@@ -286,7 +287,7 @@ export default function DeviceDetailScreen() {
           </Card>
         ) : (
           <Card style={styles.mapCard}>
-            <Text style={styles.noLocation}>
+            <Text style={[styles.noLocation, { color: themedColors.textSecondary }]}>
               No location data available yet
             </Text>
           </Card>
@@ -294,7 +295,7 @@ export default function DeviceDetailScreen() {
 
         {/* Arm/Disarm Toggle */}
         <Card style={styles.controlCard}>
-          <Text style={styles.cardTitle}>System Security</Text>
+          <Text style={[styles.cardTitle, { color: themedColors.text }]}>System Security</Text>
           <CircleToggle
             isArmed={deviceStatus?.armed_state === 'armed'}
             onToggle={handleArmToggle}
@@ -305,7 +306,7 @@ export default function DeviceDetailScreen() {
 
         {/* Other Control Buttons */}
         <Card style={[styles.controlCard, !isDeviceOnline && styles.disabledCard].filter(Boolean) as any}>
-          <Text style={styles.cardTitle}>Device Controls</Text>
+          <Text style={[styles.cardTitle, { color: themedColors.text }]}>Device Controls</Text>
           <View style={styles.controlGrid}>
             <Button
               title="Buzz Alarm"
@@ -330,21 +331,21 @@ export default function DeviceDetailScreen() {
 
         {/* Alerts History */}
         <Card style={styles.alertsCard}>
-          <Text style={styles.cardTitle}>Recent Alerts</Text>
+          <Text style={[styles.cardTitle, { color: themedColors.text }]}>Recent Alerts</Text>
           {alerts.length === 0 ? (
-            <Text style={styles.noAlerts}>No alerts yet</Text>
+            <Text style={[styles.noAlerts, { color: themedColors.textSecondary }]}>No alerts yet</Text>
           ) : (
             <View style={styles.alertsList}>
               {alerts.slice(0, alertsPage * 5).map((alert) => (
                 <View key={alert.id} style={styles.alertItem}>
                   <View style={styles.alertHeader}>
-                    <Text style={styles.alertStatus}>{alert.status || 'Unknown'}</Text>
-                    <Text style={styles.alertTime}>
+                    <Text style={[styles.alertStatus, { color: themedColors.text }]}>{alert.status || 'Unknown'}</Text>
+                    <Text style={[styles.alertTime, { color: themedColors.textSecondary }]}>
                       {alert.created_at ? formatDate(alert.created_at) : 'N/A'}
                     </Text>
                   </View>
                   {alert.lat != null && alert.lon != null && (
-                    <Text style={styles.alertLocation}>
+                    <Text style={[styles.alertLocation, { color: themedColors.textSecondary }]}>
                       📍 {alert.lat.toFixed(6)}, {alert.lon.toFixed(6)}
                     </Text>
                   )}
@@ -356,7 +357,7 @@ export default function DeviceDetailScreen() {
                   style={styles.loadMoreButton}
                   onPress={loadMoreAlerts}
                 >
-                  <Text style={styles.loadMoreText}>Load More</Text>
+                  <Text style={[styles.loadMoreText, { color: themedColors.textSecondary }]}>Load More</Text>
                   <Text style={styles.loadMoreIcon}>↓</Text>
                 </TouchableOpacity>
               )}
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: SPACING.md,
     fontSize: FONT_SIZES.md,
-    color: COLORS.gray600,
+    color: COLORS.white,
   },
   errorText: {
     fontSize: FONT_SIZES.lg,
@@ -411,7 +412,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.primary,
+    color: COLORS.white,
     fontWeight: '600',
   },
   content: {
@@ -424,18 +425,18 @@ const styles = StyleSheet.create({
   deviceName: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
-    color: COLORS.gray900,
+    color: COLORS.white,
     marginBottom: SPACING.xs,
     flex: 1,
   },
   lastStatus: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.gray600,
+    color: COLORS.gray200,
     marginBottom: SPACING.xs / 2,
   },
   lastSeen: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.gray500,
+    color: COLORS.gray400,
   },
   mapCard: {
     marginBottom: SPACING.md,
@@ -444,7 +445,7 @@ const styles = StyleSheet.create({
   },
   noLocation: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.gray500,
+    color: COLORS.gray200,
     textAlign: 'center',
     paddingVertical: SPACING.xxl,
   },
@@ -476,7 +477,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: FONT_SIZES.lg,
     fontWeight: 'bold',
-    color: COLORS.gray900,
+    color: COLORS.white,
     marginBottom: SPACING.md,
   },
   controlGrid: {
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
   },
   noAlerts: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.gray500,
+    color: COLORS.gray200,
     textAlign: 'center',
     paddingVertical: SPACING.lg,
   },
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   alertItem: {
-    backgroundColor: COLORS.gray50,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     borderLeftWidth: 3,
@@ -513,16 +514,16 @@ const styles = StyleSheet.create({
   alertStatus: {
     fontSize: FONT_SIZES.md,
     fontWeight: '600',
-    color: COLORS.gray900,
+    color: COLORS.white,
     flex: 1,
   },
   alertTime: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.gray500,
+    color: COLORS.gray400,
   },
   alertLocation: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.gray600,
+    color: COLORS.gray200,
   },
   loadMoreButton: {
     flexDirection: 'row',
@@ -554,11 +555,13 @@ const styles = StyleSheet.create({
   offlineWarning: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef2f2',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     marginTop: SPACING.md,
     gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   offlineWarningIcon: {
     fontSize: FONT_SIZES.lg,
@@ -566,7 +569,7 @@ const styles = StyleSheet.create({
   offlineWarningText: {
     flex: 1,
     fontSize: FONT_SIZES.sm,
-    color: '#991b1b',
+    color: COLORS.danger,
     fontWeight: '500',
   },
   disabledCard: {

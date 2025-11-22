@@ -17,12 +17,15 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Button } from '../components/common/Button';
 import { authAPI } from '../services/api';
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, getThemedColors } from '../constants/theme';
 import { NetworkService } from '../utils/network-utils';
 import { AuroraWaves } from '../components/common/AuroraWaves';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const themedColors = getThemedColors(isDark);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -103,11 +106,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: themedColors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       
-      {/* Aurora Waves Background */}
-      <AuroraWaves />
+      {/* Aurora Waves Background - only in dark mode */}
+      {isDark && <AuroraWaves />}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -124,14 +127,17 @@ export default function LoginScreen() {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.title}>TRACKTARD</Text>
-            <Text style={styles.subtitle}>Protect Your Vehicle</Text>
+            <Text style={[styles.title, { color: themedColors.text }]}>TRACKTARD</Text>
+            <Text style={[styles.subtitle, { color: themedColors.textSecondary }]}>Protect Your Vehicle</Text>
           </View>
 
           {/* Glassmorphism Card */}
-          <BlurView intensity={20} tint="dark" style={styles.glassCard}>
+          <BlurView intensity={20} tint={isDark ? 'dark' : 'light'} style={styles.glassCard}>
             <LinearGradient
-              colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+              colors={isDark 
+                ? ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']
+                : ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.02)']
+              }
               style={styles.cardGradient}
             >
               <View style={styles.cardContent}>
@@ -141,7 +147,7 @@ export default function LoginScreen() {
                     style={[styles.toggleButton, isLogin && styles.toggleButtonActive]}
                     onPress={() => setIsLogin(true)}
                   >
-                    <Text style={[styles.toggleText, isLogin && styles.toggleTextActive]}>
+                    <Text style={[styles.toggleText, { color: themedColors.textSecondary }, isLogin && styles.toggleTextActive]}>
                       Login
                     </Text>
                   </TouchableOpacity>
@@ -149,7 +155,7 @@ export default function LoginScreen() {
                     style={[styles.toggleButton, !isLogin && styles.toggleButtonActive]}
                     onPress={() => setIsLogin(false)}
                   >
-                    <Text style={[styles.toggleText, !isLogin && styles.toggleTextActive]}>
+                    <Text style={[styles.toggleText, { color: themedColors.textSecondary }, !isLogin && styles.toggleTextActive]}>
                       Register
                     </Text>
                   </TouchableOpacity>
@@ -159,11 +165,15 @@ export default function LoginScreen() {
                 <View style={styles.form}>
                   {!isLogin && (
                     <View style={styles.inputContainer}>
-                      <Text style={styles.label}>Name</Text>
+                      <Text style={[styles.label, { color: themedColors.text }]}>Name</Text>
                       <TextInput
-                        style={styles.input}
+                        style={[styles.input, {
+                          color: themedColors.text,
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                          borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                        }]}
                         placeholder="Your name"
-                        placeholderTextColor={COLORS.gray400}
+                        placeholderTextColor={themedColors.textTertiary}
                         value={name}
                         onChangeText={setName}
                         autoCapitalize="words"
@@ -172,11 +182,15 @@ export default function LoginScreen() {
                   )}
 
                   <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Email</Text>
+                    <Text style={[styles.label, { color: themedColors.text }]}>Email</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, {
+                        color: themedColors.text,
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                        borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                      }]}
                       placeholder="you@example.com"
-                      placeholderTextColor={COLORS.gray400}
+                      placeholderTextColor={themedColors.textTertiary}
                       value={email}
                       onChangeText={setEmail}
                       autoCapitalize="none"
@@ -185,18 +199,22 @@ export default function LoginScreen() {
                   </View>
 
                   <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Password</Text>
+                    <Text style={[styles.label, { color: themedColors.text }]}>Password</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, {
+                        color: themedColors.text,
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                        borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                      }]}
                       placeholder="••••••••"
-                      placeholderTextColor={COLORS.gray400}
+                      placeholderTextColor={themedColors.textTertiary}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry
                     />
                   </View>
 
-                  {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                  {error ? <Text style={[styles.errorText, { color: '#ef4444' }]}>{error}</Text> : null}
 
                   <Button
                     title={isLogin ? 'Sign In' : 'Create Account'}

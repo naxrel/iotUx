@@ -1,25 +1,27 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { ViewStyle } from 'react-native';
+import { SPACING } from '../../constants/theme';
+import { GlassView } from './GlassView';
 
 interface CardProps {
   children: React.ReactNode;
   style?: ViewStyle;
   padding?: number;
+  variant?: 'default' | 'featured';
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, padding = SPACING.md }) => {
+export const Card: React.FC<CardProps> = ({ 
+  children, 
+  style, 
+  padding = SPACING.md,
+  variant = 'default'
+}) => {
   return (
-    <View style={[styles.card, { padding }, style]}>
+    <GlassView 
+      intensity={variant === 'featured' ? 45 : 25}
+      style={[{ padding, marginVertical: SPACING.xs }, style]}
+    >
       {children}
-    </View>
+    </GlassView>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.medium,
-  },
-});

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { WebView } from "react-native-webview";
+import { useTheme } from "../../contexts/ThemeContext";
 
 type LeafletMapProps = {
   latitude: number;
@@ -17,6 +18,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   deviceId,
   lastStatus,
 }) => {
+  const { isDark } = useTheme();
+  
   const html = useMemo(
     () => `
       <!DOCTYPE html>
@@ -47,9 +50,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
                 ${zoom}
               );
 
-              // Using Carto Light tiles - no Google, no API key needed
+              // Use dark or light tiles based on theme
               L.tileLayer(
-                'https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+                '${isDark ? 'https://cartodb-basemaps-a.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png' : 'https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'}',
                 {
                   maxZoom: 19,
                   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -70,7 +73,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         </body>
       </html>
     `,
-    [latitude, longitude, zoom, deviceId, lastStatus]
+    [latitude, longitude, zoom, deviceId, lastStatus, isDark]
   );
 
   const openInGoogleMaps = () => {

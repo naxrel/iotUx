@@ -1,131 +1,98 @@
-import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING } from '../../constants/theme';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
-  size?: 'small' | 'medium' | 'large';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'glass';
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: any;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
   variant = 'primary',
-  size = 'medium',
   loading = false,
   disabled = false,
   style,
 }) => {
-  const getGradientColors = () => {
+  const getColors = () => {
+    if (disabled) return ['#4B5563', '#374151'];
     switch (variant) {
-      case 'primary':
-        return [COLORS.primary, COLORS.primaryDark];
-      case 'secondary':
-        return [COLORS.secondary, COLORS.secondaryDark];
-      case 'danger':
-        return [COLORS.danger, '#DC2626'];
-      default:
-        return [COLORS.gray300, COLORS.gray400];
+      case 'primary': return COLORS.primaryGradient;
+      case 'secondary': return [COLORS.secondary, '#0891b2'];
+      case 'danger': return ['#EF4444', '#B91C1C'];
+      case 'glass': return ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)'];
+      default: return ['transparent', 'transparent'];
     }
   };
 
-  const getButtonStyle = (): ViewStyle => {
-    const baseStyle: ViewStyle = {
-      borderRadius: BORDER_RADIUS.lg,
-      overflow: 'hidden',
-      ...SHADOWS.medium,
-    };
-
-    if (variant === 'outline') {
-      return {
-        ...baseStyle,
-        borderWidth: 2,
-        borderColor: COLORS.primary,
-        backgroundColor: 'transparent',
-      };
-    }
-
-    return baseStyle;
-  };
-
-  const getContentStyle = (): ViewStyle => {
-    let paddingVertical = SPACING.md;
-    let paddingHorizontal = SPACING.lg;
-
-    if (size === 'small') {
-      paddingVertical = SPACING.sm;
-      paddingHorizontal = SPACING.md;
-    } else if (size === 'large') {
-      paddingVertical = SPACING.lg;
-      paddingHorizontal = SPACING.xl;
-    }
-
-    return {
-      paddingVertical,
-      paddingHorizontal,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-    };
-  };
-
-  const getTextStyle = (): TextStyle => {
-    let fontSize = FONT_SIZES.md;
-
-    if (size === 'small') {
-      fontSize = FONT_SIZES.sm;
-    } else if (size === 'large') {
-      fontSize = FONT_SIZES.lg;
-    }
-
-    return {
-      fontSize,
-      fontWeight: '600',
-      color: variant === 'outline' ? COLORS.primary : COLORS.white,
-    };
-  };
-
-  const buttonContent = (
+  return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      style={[getButtonStyle(), style]}
       activeOpacity={0.8}
+      style={[styles.container, style]}
     >
-      {variant === 'outline' ? (
-        <View style={getContentStyle()}>
-          {loading ? (
-            <ActivityIndicator color={COLORS.primary} />
-          ) : (
-            <Text style={getTextStyle()}>{title}</Text>
-          )}
-        </View>
-      ) : (
-        <LinearGradient colors={getGradientColors()} style={getContentStyle()}>
-          {loading ? (
-            <ActivityIndicator color={COLORS.white} />
-          ) : (
-            <Text style={getTextStyle()}>{title}</Text>
-          )}
-        </LinearGradient>
-      )}
+      <LinearGradient
+        colors={getColors()}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.gradient, 
+          variant === 'outline' && styles.outline
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={[
+            styles.text, 
+            variant === 'outline' && styles.outlineText,
+            disabled && styles.disabledText
+          ]}>
+            {title}
+          </Text>
+        )}
+      </LinearGradient>
     </TouchableOpacity>
   );
-
-  return buttonContent;
 };
 
-import { View } from 'react-native';
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: BORDER_RADIUS.full,
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  gradient: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outline: {
+    borderWidth: 1,
+    borderColor: COLORS.white,
+  },
+  text: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  outlineText: {
+    color: COLORS.white,
+  },
+  disabledText: {
+    color: COLORS.gray400,
+  }
+});

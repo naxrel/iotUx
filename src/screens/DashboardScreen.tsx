@@ -1,31 +1,36 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BlurView } from 'expo-blur';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TouchableOpacity,
-  Dimensions,
-  Modal,
-  TextInput,
-  Alert,
-  ActivityIndicator,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Modal,
+    RefreshControl,
+    StatusBar as RNStatusBar,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { AuroraWaves } from '../components/common/AuroraWaves';
 import { Card } from '../components/common/Card';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { deviceAPI, authAPI, Device, DeviceCurrentStatus, Alert as DeviceAlert } from '../services/api';
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, SHADOWS } from '../constants/theme';
-import { useRouter } from 'expo-router';
+import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, getThemedColors } from '../constants/theme';
+import { authAPI, Device, deviceAPI, DeviceCurrentStatus } from '../services/api';
 import { NetworkService } from '../utils/network-utils';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const themedColors = getThemedColors(isDark);
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceStatuses, setDeviceStatuses] = useState<Map<string, DeviceCurrentStatus>>(
     new Map()
@@ -261,224 +266,108 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { backgroundColor: themedColors.background }]}>
+      <RNStatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
-      {/* Offline Banner */}
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineBannerText}>📡 No Internet Connection</Text>
+      {/* 1. The Liquid Background Layer - only in dark mode */}
+      {isDark && (
+        <View style={StyleSheet.absoluteFill}>
+          <AuroraWaves />
         </View>
       )}
-      
-      {/* Error State - Full Screen */}
-      {hasError && !loading && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>You're Currently Offline</Text>
-          <Text style={styles.errorMessage}>{errorMessage}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={() => {
-              setLoading(true);
-              setHasError(false);
-              loadData();
-            }}
-          >
-            <Text style={styles.retryButtonText}>🔄 Try Again</Text>
-          </TouchableOpacity>
-          
-          {devices.length > 0 && (
+
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={COLORS.white} 
+            />
+          }
+        >
+          {/* Header Section */}
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.date}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </Text>
+              <Text style={[styles.greeting, { color: themedColors.textSecondary }]}>Welcome back,</Text>
+              <Text style={[styles.userName, { color: themedColors.text }]}>{user?.name || 'Pilot'}</Text>
+            </View>
             <TouchableOpacity 
-              style={styles.viewCachedButton}
-              onPress={() => setHasError(false)}
+              style={styles.avatarContainer}
+              onPress={handleLogout}
             >
-              <Text style={styles.viewCachedButtonText}>View Cached Data</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-      
-      {/* Normal UI - Only show if no error or user chose to view cached */}
-      {!hasError && (
-        <>
-      {/* Header */}
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.primaryDark]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.greeting}>Hello, {user?.name || 'User'}!</Text>
-            <Text style={styles.headerSubtitle}>Monitor your devices</Text>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <Card style={styles.statCard}>
-            <Text style={styles.statNumber}>{devices.length}</Text>
-            <Text style={styles.statLabel}>Total Devices</Text>
-          </Card>
-          
-          <Card style={[styles.statCard, styles.statCardGreen]}>
-            <Text style={[styles.statNumber, { color: COLORS.online }]}>
-              {onlineDevices.length}
-            </Text>
-            <Text style={styles.statLabel}>Online</Text>
-          </Card>
-          
-          <Card style={[styles.statCard, styles.statCardRed]}>
-            <Text style={[styles.statNumber, { color: COLORS.offline }]}>
-              {offlineDevices.length}
-            </Text>
-            <Text style={styles.statLabel}>Offline</Text>
-          </Card>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => {
-                if (devices.length === 0) {
-                  Alert.alert('No Devices', 'You have no devices to delete');
-                  return;
-                }
-                setDeviceToDelete(devices[0]);
-                setShowDeleteModal(true);
-              }}
-            >
-              <LinearGradient
-                colors={['#ef4444', '#dc2626']}
-                style={styles.actionGradient}
-              >
-                <Text style={styles.actionIcon}>🗑️</Text>
-                <Text style={styles.actionText}>Delete Device</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => setShowAddModal(true)}
-            >
-              <LinearGradient
-                colors={[COLORS.secondary, COLORS.secondaryLight]}
-                style={styles.actionGradient}
-              >
-                <Text style={styles.actionIcon}>➕</Text>
-                <Text style={styles.actionText}>Add Device</Text>
-              </LinearGradient>
+              <BlurView intensity={50} tint="light" style={styles.avatarBlur}>
+                <Text style={styles.avatarText}>
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </Text>
+              </BlurView>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Recent Devices */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Devices</Text>
+          {/* Overview Stats - Floating Glass Cards */}
+          <Text style={[styles.sectionTitle, { color: themedColors.text }]}>System Status</Text>
+          <View style={styles.statsRow}>
+            <Card style={styles.statCard} variant="featured">
+              <Text style={[styles.statNumber, { color: themedColors.text }]}>{devices.length}</Text>
+              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>Total</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <Text style={[styles.statNumber, { color: COLORS.success }]}>
+                {onlineDevices.length}
+              </Text>
+              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>Online</Text>
+            </Card>
+            <Card style={styles.statCard}>
+              <Text style={[styles.statNumber, { color: COLORS.danger }]}>
+                {offlineDevices.length}
+              </Text>
+              <Text style={[styles.statLabel, { color: themedColors.textSecondary }]}>Offline</Text>
+            </Card>
+          </View>
+
+          {/* Device List */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: themedColors.text }]}>Active Devices</Text>
+            <TouchableOpacity onPress={() => setShowAddModal(true)}>
+              <Text style={styles.actionText}>+ Add New</Text>
+            </TouchableOpacity>
+          </View>
+
           {devices.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No devices registered yet</Text>
-              <Text style={styles.emptySubtext}>
-                Add your first device to get started
-              </Text>
+              <Text style={[styles.emptyText, { color: themedColors.text }]}>No vehicles tracked</Text>
+              <Text style={[styles.emptySubtext, { color: themedColors.textSecondary }]}>Add a device to start monitoring</Text>
             </Card>
           ) : (
-            devices.slice(0, 5).map((device) => {
+            devices.map((device) => {
               const status = deviceStatuses.get(device.id);
               return (
                 <TouchableOpacity
                   key={device.id}
-                  onPress={() =>
-                    router.push(`/device-detail?deviceId=${device.id}`)
-                  }
+                  activeOpacity={0.7}
+                  onPress={() => router.push(`/device-detail?deviceId=${device.id}`)}
                 >
-                  <Card style={styles.deviceCard}>
-                    <View style={styles.deviceHeader}>
-                      <View style={styles.deviceInfo}>
-                        <Text style={styles.deviceName}>{device.name}</Text>
-                        <Text style={styles.deviceId}>{device.id}</Text>
-                      </View>
-                      <StatusBadge
-                        status={status?.online ? 'online' : 'offline'}
-                      />
+                  <Card style={styles.deviceRow}>
+                    <View style={styles.iconContainer}>
+                      <Text style={{ fontSize: 24 }}>🛵</Text>
                     </View>
-                    {!!status?.last_status && (
-                      <Text style={styles.deviceStatus}>
-                        Status: {status.last_status}
-                      </Text>
-                    )}
-                    {status?.lat != null && status?.lon != null && (
-                      <Text style={styles.deviceLocation}>
-                        📍 {status.lat.toFixed(6)}, {status.lon.toFixed(6)}
-                      </Text>
-                    )}
+                    <View style={styles.deviceInfo}>
+                      <Text style={[styles.deviceName, { color: themedColors.text }]}>{device.name}</Text>
+                      <Text style={[styles.deviceId, { color: themedColors.textTertiary }]}>{device.id}</Text>
+                    </View>
+                    <StatusBadge status={status?.online ? 'online' : 'offline'} size="small" /> 
+                    <Text style={[styles.chevron, { color: themedColors.textTertiary }]}>›</Text>
                   </Card>
                 </TouchableOpacity>
               );
             })
           )}
-        </View>
-
-        {/* Recent Alerts */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          {alerts.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No alerts yet</Text>
-              <Text style={styles.emptySubtext}>
-                Activity from your devices will appear here
-              </Text>
-            </Card>
-          ) : (
-            <Card style={styles.alertsCard}>
-              {alerts.slice(0, alertsPage * 5).map((alert) => (
-                <View key={`${alert.deviceId}-${alert.id}`} style={styles.alertItem}>
-                  <View style={styles.alertHeader}>
-                    <View style={styles.alertLeft}>
-                      <Text style={styles.alertDevice}>{alert.deviceName}</Text>
-                      <Text style={styles.alertStatus}>{alert.status || 'Unknown'}</Text>
-                    </View>
-                    <Text style={styles.alertTime}>
-                      {alert.created_at ? formatDate(alert.created_at) : 'N/A'}
-                    </Text>
-                  </View>
-                  {alert.lat != null && alert.lon != null && (
-                    <Text style={styles.alertLocation}>
-                      📍 {alert.lat.toFixed(6)}, {alert.lon.toFixed(6)}
-                    </Text>
-                  )}
-                </View>
-              ))}
-              
-              {alerts.length > alertsPage * 5 && (
-                <TouchableOpacity
-                  style={styles.loadMoreButton}
-                  onPress={loadMoreAlerts}
-                >
-                  <Text style={styles.loadMoreText}>Load More</Text>
-                  <Text style={styles.loadMoreIcon}>↓</Text>
-                </TouchableOpacity>
-              )}
-            </Card>
-          )}
-        </View>
-      </ScrollView>
-      </>
-      )}
+        </ScrollView>
+      </SafeAreaView>
 
       {/* Add Device Modal */}
       <Modal
@@ -487,18 +376,26 @@ export default function DashboardScreen() {
         transparent={true}
         onRequestClose={() => setShowAddModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Device</Text>
-            <Text style={styles.modalSubtitle}>
+        <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[styles.modalContent, { 
+            backgroundColor: isDark ? 'rgba(20,20,30,0.95)' : 'rgba(255,255,255,0.95)',
+            borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+          }]}>
+            <Text style={[styles.modalTitle, { color: themedColors.text }]}>Add New Device</Text>
+            <Text style={[styles.modalSubtitle, { color: themedColors.textSecondary }]}>
               Enter your device ID and a friendly name
             </Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Device ID</Text>
+              <Text style={[styles.inputLabel, { color: themedColors.text }]}>Device ID</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, {
+                  borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                  color: themedColors.text,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                }]}
                 placeholder="e.g., MOTOR-ABC123"
+                placeholderTextColor={themedColors.textTertiary}
                 value={newDeviceId}
                 onChangeText={setNewDeviceId}
                 autoCapitalize="characters"
@@ -507,10 +404,15 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Device Name</Text>
+              <Text style={[styles.inputLabel, { color: themedColors.text }]}>Device Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, {
+                  borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                  color: themedColors.text,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                }]}
                 placeholder="e.g., My Honda Beat"
+                placeholderTextColor={themedColors.textTertiary}
                 value={newDeviceName}
                 onChangeText={setNewDeviceName}
                 editable={!addingDevice}
@@ -519,7 +421,10 @@ export default function DashboardScreen() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton, {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                  borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                }]}
                 onPress={() => {
                   setShowAddModal(false);
                   setNewDeviceId('');
@@ -527,7 +432,7 @@ export default function DashboardScreen() {
                 }}
                 disabled={addingDevice}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: themedColors.text }]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -553,10 +458,13 @@ export default function DashboardScreen() {
         transparent={true}
         onRequestClose={() => setShowDeleteModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Delete Device?</Text>
-            <Text style={styles.modalSubtitle}>
+        <View style={[styles.modalOverlay, { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[styles.modalContent, { 
+            backgroundColor: isDark ? 'rgba(20,20,30,0.95)' : 'rgba(255,255,255,0.95)',
+            borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+          }]}>
+            <Text style={[styles.modalTitle, { color: themedColors.text }]}>Delete Device?</Text>
+            <Text style={[styles.modalSubtitle, { color: themedColors.textSecondary }]}>
               Select a device to remove from your account
             </Text>
 
@@ -566,31 +474,39 @@ export default function DashboardScreen() {
                   key={device.id}
                   style={[
                     styles.deviceSelectorItem,
+                    {
+                      borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                    },
                     deviceToDelete?.id === device.id && styles.deviceSelectorItemActive,
                   ]}
                   onPress={() => setDeviceToDelete(device)}
                 >
                   <Text style={[
                     styles.deviceSelectorText,
+                    { color: themedColors.text },
                     deviceToDelete?.id === device.id && styles.deviceSelectorTextActive,
                   ]}>
                     {device.name}
                   </Text>
-                  <Text style={styles.deviceSelectorId}>{device.id}</Text>
+                  <Text style={[styles.deviceSelectorId, { color: themedColors.textTertiary }]}>{device.id}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton, {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                  borderColor: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+                }]}
                 onPress={() => {
                   setShowDeleteModal(false);
                   setDeviceToDelete(null);
                 }}
                 disabled={deleting}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: themedColors.text }]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -615,178 +531,166 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    paddingTop: SPACING.xxl + 20,
-    paddingBottom: SPACING.xl,
-    paddingHorizontal: SPACING.lg,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginBottom: SPACING.xs / 2,
-  },
-  headerSubtitle: {
-    fontSize: FONT_SIZES.md,
-    color: 'rgba(255,255,255,0.9)',
-  },
-  logoutButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  logoutText: {
-    color: COLORS.white,
-    fontWeight: '600',
-    fontSize: FONT_SIZES.sm,
-  },
-  content: {
-    flex: 1,
+    backgroundColor: COLORS.background, // Fallback if aurora fails
   },
   scrollContent: {
     padding: SPACING.lg,
+    paddingTop: SPACING.xl,
   },
-  statsContainer: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.xl,
+    marginTop: SPACING.lg,
+  },
+  date: {
+    color: COLORS.secondary,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: SPACING.xs,
+  },
+  greeting: {
+    color: COLORS.gray400,
+    fontSize: FONT_SIZES.lg,
+  },
+  userName: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: 'bold',
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  avatarBlur: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  avatarText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: 'bold',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+  },
+  actionText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+  },
+  statsRow: {
     flexDirection: 'row',
     gap: SPACING.md,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   statCard: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: SPACING.lg,
   },
-  statCardGreen: {
-    backgroundColor: `${COLORS.online}10`,
-  },
-  statCardRed: {
-    backgroundColor: `${COLORS.offline}10`,
-  },
   statNumber: {
-    fontSize: FONT_SIZES.xxxl,
+    color: COLORS.white,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: COLORS.primary,
     marginBottom: SPACING.xs,
   },
   statLabel: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.gray600,
-    fontWeight: '500',
+    color: COLORS.gray400,
+    fontSize: FONT_SIZES.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  section: {
-    marginBottom: SPACING.xl,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: 'bold',
-    color: COLORS.gray900,
-    marginBottom: SPACING.md,
-  },
-  actionsGrid: {
+  deviceRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
-  actionCard: {
-    flex: 1,
-    borderRadius: BORDER_RADIUS.lg,
-    overflow: 'hidden',
-    ...SHADOWS.medium,
-  },
-  actionGradient: {
-    padding: SPACING.lg,
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 100,
-  },
-  actionIcon: {
-    fontSize: 32,
-    marginBottom: SPACING.sm,
-  },
-  actionText: {
-    color: COLORS.white,
-    fontWeight: '600',
-    fontSize: FONT_SIZES.md,
-    textAlign: 'center',
-  },
-  deviceCard: {
-    marginBottom: SPACING.md,
-  },
-  deviceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
+    marginRight: SPACING.md,
   },
   deviceInfo: {
     flex: 1,
   },
   deviceName: {
+    color: COLORS.white,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.gray900,
-    marginBottom: SPACING.xs / 2,
   },
   deviceId: {
-    fontSize: FONT_SIZES.sm,
     color: COLORS.gray500,
+    fontSize: FONT_SIZES.xs,
   },
-  deviceStatus: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.gray600,
-    marginTop: SPACING.xs,
-  },
-  deviceLocation: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.gray600,
-    marginTop: SPACING.xs / 2,
+  chevron: {
+    color: COLORS.gray500,
+    fontSize: 24,
+    marginLeft: SPACING.md,
+    fontWeight: '300',
   },
   emptyCard: {
     alignItems: 'center',
     paddingVertical: SPACING.xxl,
   },
   emptyText: {
+    color: COLORS.gray200,
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: COLORS.gray600,
-    marginBottom: SPACING.xs,
   },
   emptySubtext: {
-    fontSize: FONT_SIZES.sm,
     color: COLORS.gray500,
+    marginTop: SPACING.xs,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Will be overridden inline
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.lg,
   },
   modalContent: {
-    backgroundColor: COLORS.white,
+    backgroundColor: 'rgba(20,20,30,0.95)', // Will be overridden inline
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.xl,
     width: '100%',
     maxWidth: 400,
-    ...SHADOWS.large,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder, // Will be overridden inline
   },
   modalTitle: {
     fontSize: FONT_SIZES.xxl,
     fontWeight: 'bold',
-    color: COLORS.gray900,
+    color: COLORS.white, // Will be overridden inline
     marginBottom: SPACING.xs,
     textAlign: 'center',
   },
   modalSubtitle: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.gray600,
+    color: COLORS.gray400, // Will be overridden inline
     marginBottom: SPACING.xl,
     textAlign: 'center',
   },
@@ -796,17 +700,17 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: COLORS.gray700,
+    color: COLORS.gray200, // Will be overridden inline
     marginBottom: SPACING.xs,
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.gray300,
+    borderColor: COLORS.glassBorder, // Will be overridden inline
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     fontSize: FONT_SIZES.md,
-    color: COLORS.gray900,
-    backgroundColor: COLORS.white,
+    color: COLORS.white, // Will be overridden inline
+    backgroundColor: 'rgba(255,255,255,0.05)', // Will be overridden inline
   },
   modalActions: {
     flexDirection: 'row',
@@ -816,16 +720,18 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: BORDER_RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
   },
   cancelButton: {
-    backgroundColor: COLORS.gray200,
+    backgroundColor: 'rgba(255,255,255,0.1)', // Will be overridden inline
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder, // Will be overridden inline
   },
   cancelButtonText: {
-    color: COLORS.gray700,
+    color: COLORS.white, // Will be overridden inline
     fontWeight: '600',
     fontSize: FONT_SIZES.md,
   },
@@ -852,19 +758,20 @@ const styles = StyleSheet.create({
   deviceSelectorItem: {
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.gray300,
+    borderColor: COLORS.glassBorder, // Will be overridden inline
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.sm,
+    backgroundColor: 'rgba(255,255,255,0.05)', // Will be overridden inline
   },
   deviceSelectorItemActive: {
-    backgroundColor: COLORS.primary + '20',
+    backgroundColor: 'rgba(99,102,241,0.2)',
     borderColor: COLORS.primary,
     borderWidth: 2,
   },
   deviceSelectorText: {
     fontSize: FONT_SIZES.md,
     fontWeight: '600',
-    color: COLORS.gray900,
+    color: COLORS.white,
     marginBottom: SPACING.xs / 2,
   },
   deviceSelectorTextActive: {
@@ -873,120 +780,5 @@ const styles = StyleSheet.create({
   deviceSelectorId: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.gray500,
-  },
-  alertsCard: {
-    padding: SPACING.md,
-  },
-  alertItem: {
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray200,
-  },
-  alertHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.xs,
-  },
-  alertLeft: {
-    flex: 1,
-  },
-  alertDevice: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: SPACING.xs / 2,
-  },
-  alertStatus: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: '500',
-    color: COLORS.gray900,
-  },
-  alertTime: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.gray500,
-  },
-  alertLocation: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.gray600,
-    marginTop: SPACING.xs / 2,
-  },
-  loadMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.md,
-    marginTop: SPACING.sm,
-    gap: SPACING.xs,
-  },
-  loadMoreText: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  loadMoreIcon: {
-    fontSize: FONT_SIZES.lg,
-    color: COLORS.primary,
-  },
-  offlineBanner: {
-    backgroundColor: '#ef4444',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  offlineBannerText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xxl,
-    backgroundColor: COLORS.background,
-  },
-  errorIcon: {
-    fontSize: 80,
-    marginBottom: SPACING.lg,
-  },
-  errorTitle: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: 'bold',
-    color: COLORS.gray900,
-    marginBottom: SPACING.md,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.gray600,
-    textAlign: 'center',
-    marginBottom: SPACING.xl,
-    lineHeight: 22,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xxl,
-    borderRadius: BORDER_RADIUS.lg,
-    minWidth: 200,
-    alignItems: 'center',
-    ...SHADOWS.medium,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.md,
-    fontWeight: '600',
-  },
-  viewCachedButton: {
-    marginTop: SPACING.md,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-  },
-  viewCachedButtonText: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
   },
 });

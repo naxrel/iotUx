@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   helpText: {
     marginTop: SPACING.md,
     fontSize: FONT_SIZES.sm,
-    color: COLORS.gray600,
+    color: COLORS.gray200,
     fontWeight: '500',
   },
   disabledText: {

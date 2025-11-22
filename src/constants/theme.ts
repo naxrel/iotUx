@@ -1,51 +1,53 @@
 export const COLORS = {
-  // Primary colors - calm and professional
-  primary: '#6366F1', // Indigo
-  primaryDark: '#4F46E5',
-  primaryLight: '#818CF8',
+  // Deep, rich background for that "Liquid" feel (Dark Mode)
+  background: '#000000', 
+  backgroundDeep: '#050511',
   
-  // Secondary colors - warm accent
-  secondary: '#F59E0B',
-  secondaryDark: '#D97706',
-  secondaryLight: '#FBBF24',
+  // Light mode backgrounds
+  backgroundLight: '#FFFFFF',
+  backgroundLightSecondary: '#F9FAFB',
   
-  // Status colors
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
-  info: '#3B82F6',
+  // Primary - Electric Indigo & Neon accents
+  primary: '#6366F1', 
+  primaryGradient: ['#6366F1', '#8B5CF6'], // Indigo to Purple
+  secondary: '#06B6D4', // Cyan
+  accent: '#EC4899', // Pink
+  
+  // Status
+  success: '#34D399',
+  warning: '#FBBF24',
+  danger: '#F87171',
   
   // Online/Offline indicators
-  online: '#10B981',
+  online: '#34D399',
   offline: '#6B7280',
   
-  // Neutral colors - calm and easy on eyes
+  // Text
   white: '#FFFFFF',
-  black: '#000000',
-  
-  // Grays - high contrast for readability
-  gray50: '#F9FAFB',
   gray100: '#F3F4F6',
   gray200: '#E5E7EB',
-  gray300: '#D1D5DB',
   gray400: '#9CA3AF',
   gray500: '#6B7280',
   gray600: '#4B5563',
   gray700: '#374151',
   gray800: '#1F2937',
   gray900: '#111827',
+  black: '#000000',
   
-  // Background colors
-  background: '#F9FAFB',
-  backgroundDark: '#111827',
+  // Glassmorphism Constants - Dark
+  glassBorder: 'rgba(255, 255, 255, 0.15)',
+  glassSurface: 'rgba(255, 255, 255, 0.05)',
+  glassHighlight: 'rgba(255, 255, 255, 0.1)',
   
-  // Card colors
-  card: '#FFFFFF',
-  cardDark: '#1F2937',
+  // Glassmorphism Constants - Light
+  glassBorderLight: 'rgba(0, 0, 0, 0.1)',
+  glassSurfaceLight: 'rgba(255, 255, 255, 0.7)',
+  glassHighlightLight: 'rgba(255, 255, 255, 0.9)',
   
-  // Glassmorphism
-  glassLight: 'rgba(255, 255, 255, 0.15)',
-  glassDark: 'rgba(255, 255, 255, 0.05)',
+  // Legacy support
+  primaryDark: '#4F46E5',
+  primaryLight: '#818CF8',
+  info: '#3B82F6',
   
   // Bubble colors for login animation
   bubble1: 'rgba(99, 102, 241, 0.3)', // Indigo
@@ -82,11 +84,10 @@ export const FONT_WEIGHTS = {
 };
 
 export const BORDER_RADIUS = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  xxl: 24,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
   full: 9999,
 };
 
@@ -115,3 +116,15 @@ export const SHADOWS = {
 };
 
 export const API_BASE_URL = 'https://iot.fyuko.app';
+
+// Helper function to get theme-aware colors
+export const getThemedColors = (isDark: boolean) => ({
+  background: isDark ? COLORS.background : COLORS.backgroundLight,
+  backgroundSecondary: isDark ? COLORS.backgroundDeep : COLORS.backgroundLightSecondary,
+  text: isDark ? COLORS.white : COLORS.gray900,
+  textSecondary: isDark ? COLORS.gray400 : COLORS.gray600,
+  textTertiary: isDark ? COLORS.gray500 : COLORS.gray500,
+  border: isDark ? COLORS.glassBorder : COLORS.glassBorderLight,
+  surface: isDark ? COLORS.glassSurface : COLORS.glassSurfaceLight,
+  cardBg: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.9)',
+});
