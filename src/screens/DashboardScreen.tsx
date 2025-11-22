@@ -332,9 +332,16 @@ export default function DashboardScreen() {
           {/* Device List */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: themedColors.text }]}>Active Devices</Text>
-            <TouchableOpacity onPress={() => setShowAddModal(true)}>
-              <Text style={styles.actionText}>+ Add New</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.actionButton}>
+                <Text style={styles.actionText}>+ Add New</Text>
+              </TouchableOpacity>
+              {devices.length > 0 && (
+                <TouchableOpacity onPress={() => setShowDeleteModal(true)} style={styles.actionButton}>
+                  <Text style={[styles.actionText, { color: '#ef4444' }]}>🗑️ Remove</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {devices.length === 0 ? (
@@ -591,6 +598,14 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZES.xl,
     fontWeight: '700',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  actionButton: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
   },
   actionText: {
     color: COLORS.primary,
