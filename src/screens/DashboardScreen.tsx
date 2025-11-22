@@ -20,10 +20,10 @@ import {
 import { AuroraWaves } from '../components/common/AuroraWaves';
 import { Card } from '../components/common/Card';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, getThemedColors } from '../constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZES, getThemedColors, SPACING } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import { authAPI, Device, deviceAPI, DeviceCurrentStatus } from '../services/api';
 import { NetworkService } from '../utils/network-utils';
-import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
