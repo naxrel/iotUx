@@ -104,7 +104,8 @@ export class CommandQueue {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
     }
-    await AsyncStorage.removeItem(QUEUE_KEY);
+    // Use immediate save to ensure clearing is persisted
+    await this.saveQueueImmediate();
   }
 
   static getPendingCount(): number {

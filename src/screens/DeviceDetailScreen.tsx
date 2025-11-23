@@ -21,7 +21,33 @@ import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, getThemedColors } from '../
 import { Alert as DeviceAlert, deviceAPI, DeviceCurrentStatus } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { hashData } from '../utils/performance-utils';
+
 const { width } = Dimensions.get('window');
+
+// Pure helper functions moved outside component for performance
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleString();
+};
+
+const formatLocationTime = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSeconds < 60) {
+    return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  } else {
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  }
+};
 
 interface LastValidLocation {
   lat: number;
@@ -164,30 +190,6 @@ export default function DeviceDetailScreen() {
 
   const loadMoreAlerts = useCallback(() => {
     setAlertsPage((prev) => prev + 1);
-  }, []);
-
-  const formatDate = useCallback((dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  }, []);
-
-  const formatLocationTime = useCallback((date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffSeconds < 60) {
-      return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
-    } else if (diffMinutes < 60) {
-      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-    } else {
-      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    }
   }, []);
 
   const isDeviceOnline = deviceStatus?.online ?? false;
