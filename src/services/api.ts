@@ -55,8 +55,19 @@ const cleanupCache = () => {
   }
 };
 
-// Run cleanup every 15 seconds (more efficient for 1-second TTL)
-setInterval(cleanupCache, 15000);
+// Run cleanup on-demand when adding new requests to avoid memory leaks
+// without needing a timer that runs indefinitely
+const cleanupAndCache = (key: string, promise: Promise<any>) => {
+  // Cleanup old entries before adding new one
+  cleanupCache();
+  
+  pendingRequests.set(key, { promise, timestamp: Date.now() });
+  
+  // Remove from cache after completion (not after TTL to avoid race conditions)
+  promise.finally(() => {
+    pendingRequests.delete(key);
+  });
+};
 
 // Create axios instance
 const api = axios.create({
@@ -216,13 +227,7 @@ export const deviceAPI = {
     }
     
     const promise = api.get<Device[]>('/me/devices').then(res => res.data);
-    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
-    
-    // Clean up after request completes (periodic cleanup will handle expiration)
-    promise.finally(() => {
-      pendingRequests.delete(cacheKey);
-    });
-    
+    cleanupAndCache(cacheKey, promise);
     return promise;
   },
 
@@ -249,12 +254,7 @@ export const deviceAPI = {
     }
     
     const promise = api.get<DeviceStatus>(`/devices/${deviceId}/status`).then(res => res.data);
-    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
-    
-    promise.finally(() => {
-      pendingRequests.delete(cacheKey);
-    });
-    
+    cleanupAndCache(cacheKey, promise);
     return promise;
   },
 
@@ -268,12 +268,7 @@ export const deviceAPI = {
     }
     
     const promise = api.get<DeviceCurrentStatus>(`/devices/${deviceId}/current`).then(res => res.data);
-    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
-    
-    promise.finally(() => {
-      pendingRequests.delete(cacheKey);
-    });
-    
+    cleanupAndCache(cacheKey, promise);
     return promise;
   },
 
@@ -287,12 +282,7 @@ export const deviceAPI = {
     }
     
     const promise = api.get<Alert[]>(`/api/devices/${deviceId}/alerts`).then(res => res.data);
-    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
-    
-    promise.finally(() => {
-      pendingRequests.delete(cacheKey);
-    });
-    
+    cleanupAndCache(cacheKey, promise);
     return promise;
   },
 

@@ -27,8 +27,11 @@ export const hashData = (data: any): string => {
     const sortedKeys = Object.keys(data).sort();
     const pairs = sortedKeys.map(key => `${key}:${hashData(data[key])}`);
     return `{${pairs.join(',')}}`;
-  } catch {
+  } catch (error) {
     // Fallback for circular references or other errors
-    return String(data);
+    // Generate a more descriptive hash to avoid collisions
+    const type = typeof data;
+    const timestamp = Date.now();
+    return `[hash-error:${type}:${timestamp}]`;
   }
 };

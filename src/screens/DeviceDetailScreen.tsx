@@ -92,23 +92,27 @@ export default function DeviceDetailScreen() {
       const alertsHash = hashData(alertsData);
       const newDataHash = `${statusHash}|${alertsHash}`;
       
-      // Ensure data is valid before setting state
-      // Skip update if we're in the middle of toggling (keep optimistic update)
-      if (statusData && !isTogglingRef.current && newDataHash !== lastDataHashRef.current) {
+      const dataChanged = newDataHash !== lastDataHashRef.current;
+      
+      if (dataChanged) {
         lastDataHashRef.current = newDataHash;
-        setDeviceStatus(statusData);
         
-        // Update last valid location if we have valid coordinates
-        if (statusData.lat != null && statusData.lon != null && 
-            !(statusData.lat === 0 && statusData.lon === 0)) {
-          setLastValidLocation({
-            lat: statusData.lat,
-            lon: statusData.lon,
-            timestamp: new Date(),
-          });
+        // Update status if valid and not toggling
+        if (statusData && !isTogglingRef.current) {
+          setDeviceStatus(statusData);
+          
+          // Update last valid location if we have valid coordinates
+          if (statusData.lat != null && statusData.lon != null && 
+              !(statusData.lat === 0 && statusData.lon === 0)) {
+            setLastValidLocation({
+              lat: statusData.lat,
+              lon: statusData.lon,
+              timestamp: new Date(),
+            });
+          }
         }
         
-        // Update alerts when data changes
+        // Update alerts independently of status
         if (Array.isArray(alertsData)) {
           setAlerts([...alertsData].reverse()); // Show newest first safely
         }
