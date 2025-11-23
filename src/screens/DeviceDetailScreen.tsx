@@ -19,7 +19,9 @@ import { MapComponent } from '../components/common/MapComponent';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, getThemedColors } from '../constants/theme';
 import { Alert as DeviceAlert, deviceAPI, DeviceCurrentStatus } from '../services/api';
-import { useTheme } from '../contexts/ThemeContext';const { width } = Dimensions.get('window');
+import { useTheme } from '../contexts/ThemeContext';
+import { hashData } from '../utils/performance-utils';
+const { width } = Dimensions.get('window');
 
 interface LastValidLocation {
   lat: number;
@@ -45,15 +47,6 @@ export default function DeviceDetailScreen() {
   const [lastValidLocation, setLastValidLocation] = useState<LastValidLocation | null>(null);
   const isTogglingRef = useRef(false);
   const lastDataHashRef = useRef<string>('');
-
-  // Helper to hash data for change detection
-  const hashData = (data: any): string => {
-    try {
-      return JSON.stringify(data);
-    } catch {
-      return String(data);
-    }
-  };
 
   const loadData = useCallback(async () => {
     if (!deviceId) {

@@ -24,6 +24,7 @@ import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, getThemedColors } from '../
 import { authAPI, Device, deviceAPI, DeviceCurrentStatus } from '../services/api';
 import { NetworkService } from '../utils/network-utils';
 import { useTheme } from '../contexts/ThemeContext';
+import { hashData } from '../utils/performance-utils';
 
 const { width } = Dimensions.get('window');
 
@@ -55,15 +56,6 @@ export default function DashboardScreen() {
   const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const isUnmountingRef = React.useRef(false);
   const lastDataHashRef = React.useRef<string>('');
-
-  // Helper to hash data for change detection
-  const hashData = useCallback((data: any): string => {
-    try {
-      return JSON.stringify(data);
-    } catch {
-      return String(data);
-    }
-  }, []);
 
   const loadData = useCallback(async () => {
     if (isUnmountingRef.current) return; // Don't start new requests if logging out
@@ -164,7 +156,7 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
-  }, [hashData, router]);
+  }, [router]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -210,7 +202,7 @@ export default function DashboardScreen() {
         intervalRef.current = null;
       }
     };
-  }, [authChecked, isOnline, hasError, loadData, router]);
+  }, [authChecked, isOnline, hasError, loadData]);
 
   // Memoize device calculations to avoid recalculation on every render
   const onlineDevices = useMemo(

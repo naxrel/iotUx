@@ -218,9 +218,9 @@ export const deviceAPI = {
     const promise = api.get<Device[]>('/me/devices').then(res => res.data);
     pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
     
-    // Clean up after request completes
+    // Clean up after request completes (periodic cleanup will handle expiration)
     promise.finally(() => {
-      setTimeout(() => pendingRequests.delete(cacheKey), REQUEST_CACHE_TTL);
+      pendingRequests.delete(cacheKey);
     });
     
     return promise;
@@ -252,7 +252,7 @@ export const deviceAPI = {
     pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
     
     promise.finally(() => {
-      setTimeout(() => pendingRequests.delete(cacheKey), REQUEST_CACHE_TTL);
+      pendingRequests.delete(cacheKey);
     });
     
     return promise;
@@ -271,15 +271,29 @@ export const deviceAPI = {
     pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
     
     promise.finally(() => {
-      setTimeout(() => pendingRequests.delete(cacheKey), REQUEST_CACHE_TTL);
+      pendingRequests.delete(cacheKey);
     });
     
     return promise;
   },
 
   getDeviceAlerts: async (deviceId: string): Promise<Alert[]> => {
-    const response = await api.get<Alert[]>(`/api/devices/${deviceId}/alerts`);
-    return response.data;
+    const cacheKey = getCacheKey(`/api/devices/${deviceId}/alerts`, 'GET');
+    const pending = pendingRequests.get(cacheKey);
+    
+    if (pending && Date.now() - pending.timestamp < REQUEST_CACHE_TTL) {
+      console.log(`🔄 Deduplicating getDeviceAlerts request for ${deviceId}`);
+      return pending.promise;
+    }
+    
+    const promise = api.get<Alert[]>(`/api/devices/${deviceId}/alerts`).then(res => res.data);
+    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
+    
+    promise.finally(() => {
+      pendingRequests.delete(cacheKey);
+    });
+    
+    return promise;
   },
 
   toggleArmedState: async (deviceId: string): Promise<{ device_id: string; armed_state: string }> => {
