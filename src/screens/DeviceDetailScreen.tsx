@@ -2,24 +2,25 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { CircleToggle } from '../components/common/CircleToggle';
 import { MapComponent } from '../components/common/MapComponent';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { BORDER_RADIUS, COLORS, FONT_SIZES, SPACING, getThemedColors } from '../constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZES, getThemedColors, SPACING } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import { Alert as DeviceAlert, deviceAPI, DeviceCurrentStatus } from '../services/api';
-import { useTheme } from '../contexts/ThemeContext';const { width } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface LastValidLocation {
   lat: number;
