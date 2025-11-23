@@ -25,8 +25,11 @@ const updateCachedToken = (token: string | null) => {
   tokenCachePromise = null;
 };
 
-// Initialize on module load
-initializeTokenCache();
+// Initialize on module load (with error handling for early imports)
+initializeTokenCache().catch(err => {
+  console.warn('Failed to initialize token cache on module load:', err);
+  // Token will be loaded lazily on first request
+});
 
 // Request deduplication cache
 interface PendingRequest {
@@ -52,8 +55,8 @@ const cleanupCache = () => {
   }
 };
 
-// Run cleanup every 5 seconds
-setInterval(cleanupCache, 5000);
+// Run cleanup every 15 seconds (more efficient for 1-second TTL)
+setInterval(cleanupCache, 15000);
 
 // Create axios instance
 const api = axios.create({

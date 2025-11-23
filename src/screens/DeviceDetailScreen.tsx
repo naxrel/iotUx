@@ -69,7 +69,9 @@ export default function DeviceDetailScreen() {
       ]);
 
       // Check if data has changed before updating state
-      const newDataHash = hashData({ statusData, alertsData });
+      const statusHash = hashData(statusData);
+      const alertsHash = hashData(alertsData);
+      const newDataHash = `${statusHash}|${alertsHash}`;
       
       // Ensure data is valid before setting state
       // Skip update if we're in the middle of toggling (keep optimistic update)
@@ -86,9 +88,11 @@ export default function DeviceDetailScreen() {
             timestamp: new Date(),
           });
         }
-      }
-      if (Array.isArray(alertsData) && newDataHash !== lastDataHashRef.current) {
-        setAlerts([...alertsData].reverse()); // Show newest first safely
+        
+        // Update alerts when data changes
+        if (Array.isArray(alertsData)) {
+          setAlerts([...alertsData].reverse()); // Show newest first safely
+        }
       }
       
       setAlertsPage(1);
