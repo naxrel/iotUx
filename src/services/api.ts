@@ -28,6 +28,33 @@ const updateCachedToken = (token: string | null) => {
 // Initialize on module load
 initializeTokenCache();
 
+// Request deduplication cache
+interface PendingRequest {
+  promise: Promise<any>;
+  timestamp: number;
+}
+
+const pendingRequests = new Map<string, PendingRequest>();
+const REQUEST_CACHE_TTL = 1000; // Cache for 1 second
+
+// Helper to create cache key from request config
+const getCacheKey = (url: string, method: string = 'GET'): string => {
+  return `${method}:${url}`;
+};
+
+// Cleanup stale cache entries
+const cleanupCache = () => {
+  const now = Date.now();
+  for (const [key, value] of pendingRequests.entries()) {
+    if (now - value.timestamp > REQUEST_CACHE_TTL) {
+      pendingRequests.delete(key);
+    }
+  }
+};
+
+// Run cleanup every 5 seconds
+setInterval(cleanupCache, 5000);
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -176,8 +203,24 @@ export const authAPI = {
 // Device API
 export const deviceAPI = {
   getMyDevices: async (): Promise<Device[]> => {
-    const response = await api.get<Device[]>('/me/devices');
-    return response.data;
+    const cacheKey = getCacheKey('/me/devices', 'GET');
+    const pending = pendingRequests.get(cacheKey);
+    
+    // Return existing promise if request is already in flight
+    if (pending && Date.now() - pending.timestamp < REQUEST_CACHE_TTL) {
+      console.log('🔄 Deduplicating getMyDevices request');
+      return pending.promise;
+    }
+    
+    const promise = api.get<Device[]>('/me/devices').then(res => res.data);
+    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
+    
+    // Clean up after request completes
+    promise.finally(() => {
+      setTimeout(() => pendingRequests.delete(cacheKey), REQUEST_CACHE_TTL);
+    });
+    
+    return promise;
   },
 
   registerDevice: async (deviceId: string, name: string): Promise<Device> => {
@@ -194,13 +237,41 @@ export const deviceAPI = {
   },
 
   getDeviceStatus: async (deviceId: string): Promise<DeviceStatus> => {
-    const response = await api.get<DeviceStatus>(`/devices/${deviceId}/status`);
-    return response.data;
+    const cacheKey = getCacheKey(`/devices/${deviceId}/status`, 'GET');
+    const pending = pendingRequests.get(cacheKey);
+    
+    if (pending && Date.now() - pending.timestamp < REQUEST_CACHE_TTL) {
+      console.log(`🔄 Deduplicating getDeviceStatus request for ${deviceId}`);
+      return pending.promise;
+    }
+    
+    const promise = api.get<DeviceStatus>(`/devices/${deviceId}/status`).then(res => res.data);
+    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
+    
+    promise.finally(() => {
+      setTimeout(() => pendingRequests.delete(cacheKey), REQUEST_CACHE_TTL);
+    });
+    
+    return promise;
   },
 
   getDeviceCurrentStatus: async (deviceId: string): Promise<DeviceCurrentStatus> => {
-    const response = await api.get<DeviceCurrentStatus>(`/devices/${deviceId}/current`);
-    return response.data;
+    const cacheKey = getCacheKey(`/devices/${deviceId}/current`, 'GET');
+    const pending = pendingRequests.get(cacheKey);
+    
+    if (pending && Date.now() - pending.timestamp < REQUEST_CACHE_TTL) {
+      console.log(`🔄 Deduplicating getDeviceCurrentStatus request for ${deviceId}`);
+      return pending.promise;
+    }
+    
+    const promise = api.get<DeviceCurrentStatus>(`/devices/${deviceId}/current`).then(res => res.data);
+    pendingRequests.set(cacheKey, { promise, timestamp: Date.now() });
+    
+    promise.finally(() => {
+      setTimeout(() => pendingRequests.delete(cacheKey), REQUEST_CACHE_TTL);
+    });
+    
+    return promise;
   },
 
   getDeviceAlerts: async (deviceId: string): Promise<Alert[]> => {

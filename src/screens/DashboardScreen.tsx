@@ -57,15 +57,15 @@ export default function DashboardScreen() {
   const lastDataHashRef = React.useRef<string>('');
 
   // Helper to hash data for change detection
-  const hashData = (data: any): string => {
+  const hashData = useCallback((data: any): string => {
     try {
       return JSON.stringify(data);
     } catch {
       return String(data);
     }
-  };
+  }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (isUnmountingRef.current) return; // Don't start new requests if logging out
     
     // Check network first
@@ -164,7 +164,7 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hashData, router]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
