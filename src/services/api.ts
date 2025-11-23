@@ -71,11 +71,11 @@ const cleanupCache = () => {
 
 // Run cleanup on-demand when adding new requests to avoid memory leaks
 // without needing a timer that runs indefinitely
-const cleanupAndCache = (key: string, promise: Promise<any>) => {
+const cleanupAndCache = <T>(key: string, promise: Promise<T>): void => {
   // Cleanup old entries before adding new one
   cleanupCache();
   
-  pendingRequests.set(key, { promise, timestamp: Date.now() });
+  pendingRequests.set(key, { promise: promise as Promise<any>, timestamp: Date.now() });
   
   // Remove from cache after completion (not after TTL to avoid race conditions)
   promise.finally(() => {

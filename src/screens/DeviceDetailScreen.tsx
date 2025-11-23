@@ -24,6 +24,7 @@ import { hashData } from '../utils/performance-utils';
 
 const { width } = Dimensions.get('window');
 
+
 // Pure helper functions moved outside component for performance
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
