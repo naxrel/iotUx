@@ -29,7 +29,8 @@ export const hashData = (data: any): string => {
     return `{${pairs.join(',')}}`;
   } catch (error) {
     // Fallback for circular references or other errors
-    // Generate a more descriptive hash to avoid collisions
+    // Use timestamp to ensure errors always trigger updates (safer for change detection)
+    // This prevents stale data from being cached when hashing fails
     const type = typeof data;
     const timestamp = Date.now();
     return `[hash-error:${type}:${timestamp}]`;

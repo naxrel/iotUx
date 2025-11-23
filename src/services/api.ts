@@ -8,28 +8,47 @@ const USER_DATA_KEY = '@iotux_user_data';
 // In-memory cache for auth token to avoid AsyncStorage reads on every request
 let cachedAuthToken: string | null = null;
 let tokenCachePromise: Promise<string | null> | null = null;
+let isInitializing = false;
 
-// Initialize token cache
+// Initialize token cache (singleton pattern to prevent race conditions)
 const initializeTokenCache = async (): Promise<string | null> => {
-  if (!tokenCachePromise) {
-    tokenCachePromise = AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  // If already initialized, return cached value
+  if (cachedAuthToken !== null) {
+    return cachedAuthToken;
   }
-  cachedAuthToken = await tokenCachePromise;
-  tokenCachePromise = null;
-  return cachedAuthToken;
+  
+  // If initialization is in progress, wait for it
+  if (tokenCachePromise) {
+    return tokenCachePromise;
+  }
+  
+  // Start initialization
+  isInitializing = true;
+  tokenCachePromise = AsyncStorage.getItem(AUTH_TOKEN_KEY)
+    .then(token => {
+      cachedAuthToken = token;
+      isInitializing = false;
+      return token;
+    })
+    .catch(err => {
+      console.warn('Failed to initialize token cache:', err);
+      isInitializing = false;
+      tokenCachePromise = null;
+      return null;
+    });
+  
+  return tokenCachePromise;
 };
 
 // Call this to update the cached token
 const updateCachedToken = (token: string | null) => {
   cachedAuthToken = token;
   tokenCachePromise = null;
+  isInitializing = false;
 };
 
-// Initialize on module load (with error handling for early imports)
-initializeTokenCache().catch(err => {
-  console.warn('Failed to initialize token cache on module load:', err);
-  // Token will be loaded lazily on first request
-});
+// Start initialization on module load (won't block API calls)
+initializeTokenCache();
 
 // Request deduplication cache
 interface PendingRequest {

@@ -99,9 +99,6 @@ export default function DashboardScreen() {
 
       if (isUnmountingRef.current) return; // Don't update state if logged out
       
-      // Check if data has changed before updating state
-      const newDataHash = hashData({ userData, devicesData });
-      
       setUser(userData);
       setDevices(devicesData);
 
