@@ -202,7 +202,7 @@ export default function DashboardScreen() {
         intervalRef.current = null;
       }
     };
-  }, [authChecked, isOnline, hasError, loadData]);
+  }, [authChecked, isOnline, hasError, loadData, router]);
 
   // Memoize device calculations to avoid recalculation on every render
   const onlineDevices = useMemo(
