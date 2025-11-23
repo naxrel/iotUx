@@ -5,6 +5,29 @@ import { API_BASE_URL } from '../constants/theme';
 const AUTH_TOKEN_KEY = '@iotux_auth_token';
 const USER_DATA_KEY = '@iotux_user_data';
 
+// In-memory cache for auth token to avoid AsyncStorage reads on every request
+let cachedAuthToken: string | null = null;
+let tokenCachePromise: Promise<string | null> | null = null;
+
+// Initialize token cache
+const initializeTokenCache = async (): Promise<string | null> => {
+  if (!tokenCachePromise) {
+    tokenCachePromise = AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  }
+  cachedAuthToken = await tokenCachePromise;
+  tokenCachePromise = null;
+  return cachedAuthToken;
+};
+
+// Call this to update the cached token
+const updateCachedToken = (token: string | null) => {
+  cachedAuthToken = token;
+  tokenCachePromise = null;
+};
+
+// Initialize on module load
+initializeTokenCache();
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -17,7 +40,8 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    // Use cached token if available, otherwise load from storage
+    const token = cachedAuthToken ?? await initializeTokenCache();
     if (token) {
       config.headers['X-Auth-Token'] = token;
       console.log('Request with token:', {
@@ -59,6 +83,7 @@ api.interceptors.response.use(
       // Clear auth data on 401 - this is expected, user needs to login again
       console.log('🔐 Session expired - please login again');
       await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, USER_DATA_KEY]);
+      updateCachedToken(null); // Clear cached token
       
       // Flag this error as handled so we don't show red screen
       error.isAuthError = true;
@@ -113,6 +138,7 @@ export const authAPI = {
     const userData = response.data;
     await AsyncStorage.setItem(AUTH_TOKEN_KEY, userData.auth_token);
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+    updateCachedToken(userData.auth_token); // Update cache
     return userData;
   },
 
@@ -121,11 +147,13 @@ export const authAPI = {
     const userData = response.data;
     await AsyncStorage.setItem(AUTH_TOKEN_KEY, userData.auth_token);
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+    updateCachedToken(userData.auth_token); // Update cache
     return userData;
   },
 
   logout: async (): Promise<void> => {
     await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, USER_DATA_KEY]);
+    updateCachedToken(null); // Clear cache
   },
 
   getCurrentUser: async (): Promise<User | null> => {

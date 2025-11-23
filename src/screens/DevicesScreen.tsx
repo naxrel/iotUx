@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -32,7 +32,7 @@ export default function DevicesScreen() {
   const [newDeviceName, setNewDeviceName] = useState('');
   const [addingDevice, setAddingDevice] = useState(false);
 
-  const loadDevices = async () => {
+  const loadDevices = useCallback(async () => {
     try {
       const devicesData = await deviceAPI.getMyDevices();
       
@@ -78,7 +78,7 @@ export default function DevicesScreen() {
         );
       }
     }
-  };
+  }, [router]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -92,7 +92,7 @@ export default function DevicesScreen() {
     // Auto refresh every 10 seconds
     const interval = setInterval(loadDevices, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadDevices]);
 
   useEffect(() => {
     if (params?.showAddDevice) {
@@ -100,7 +100,7 @@ export default function DevicesScreen() {
     }
   }, [params]);
 
-  const handleAddDevice = async () => {
+  const handleAddDevice = useCallback(async () => {
     if (!newDeviceId.trim() || !newDeviceName.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -119,15 +119,18 @@ export default function DevicesScreen() {
     } finally {
       setAddingDevice(false);
     }
-  };
+  }, [newDeviceId, newDeviceName, loadDevices]);
 
-  const filteredDevices = devices.filter(
-    (device) =>
-      device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      device.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoize filtered devices to avoid recalculation on every render
+  const filteredDevices = useMemo(() => {
+    return devices.filter(
+      (device) =>
+        device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        device.id.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [devices, searchQuery]);
 
-  const renderDevice = ({ item }: { item: Device }) => {
+  const renderDevice = useCallback(({ item }: { item: Device }) => {
     // Add null check for item
     if (!item || !item.id) {
       console.warn('Invalid device item:', item);
@@ -183,7 +186,7 @@ export default function DevicesScreen() {
         </Card>
       </TouchableOpacity>
     );
-  };
+  }, [deviceStatuses, router]);
 
   return (
     <View style={styles.container}>

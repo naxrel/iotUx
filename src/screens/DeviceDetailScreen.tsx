@@ -44,6 +44,16 @@ export default function DeviceDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [lastValidLocation, setLastValidLocation] = useState<LastValidLocation | null>(null);
   const isTogglingRef = useRef(false);
+  const lastDataHashRef = useRef<string>('');
+
+  // Helper to hash data for change detection
+  const hashData = (data: any): string => {
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return String(data);
+    }
+  };
 
   const loadData = useCallback(async () => {
     if (!deviceId) {
@@ -58,9 +68,13 @@ export default function DeviceDetailScreen() {
         deviceAPI.getDeviceAlerts(deviceId),
       ]);
 
+      // Check if data has changed before updating state
+      const newDataHash = hashData({ statusData, alertsData });
+      
       // Ensure data is valid before setting state
       // Skip update if we're in the middle of toggling (keep optimistic update)
-      if (statusData && !isTogglingRef.current) {
+      if (statusData && !isTogglingRef.current && newDataHash !== lastDataHashRef.current) {
+        lastDataHashRef.current = newDataHash;
         setDeviceStatus(statusData);
         
         // Update last valid location if we have valid coordinates
@@ -73,7 +87,7 @@ export default function DeviceDetailScreen() {
           });
         }
       }
-      if (Array.isArray(alertsData)) {
+      if (Array.isArray(alertsData) && newDataHash !== lastDataHashRef.current) {
         setAlerts([...alertsData].reverse()); // Show newest first safely
       }
       
@@ -106,7 +120,7 @@ export default function DeviceDetailScreen() {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  const sendCommand = async (command: string) => {
+  const sendCommand = useCallback(async (command: string) => {
     if (!deviceId) return;
     setSending(command);
     try {
@@ -117,9 +131,9 @@ export default function DeviceDetailScreen() {
     } finally {
       setSending(null);
     }
-  };
+  }, [deviceId]);
 
-  const handleArmToggle = async (shouldArm: boolean) => {
+  const handleArmToggle = useCallback(async (shouldArm: boolean) => {
     if (!deviceId) return;
     const command = shouldArm ? 'ARM' : 'DISARM';
     setSending('toggle');
@@ -149,29 +163,18 @@ export default function DeviceDetailScreen() {
     } finally {
       setSending(null);
     }
-  };
+  }, [deviceId, deviceStatus, loadData]);
 
-  const loadMoreAlerts = () => {
+  const loadMoreAlerts = useCallback(() => {
     setAlertsPage((prev) => prev + 1);
-  };
+  }, []);
 
-  const isDeviceOnline = deviceStatus?.online ?? false;
-  const lastSeenSeconds = deviceStatus?.seconds_since_seen;
-  
-  const lastSeenText = lastSeenSeconds != null 
-    ? lastSeenSeconds < 60
-      ? `${Math.floor(lastSeenSeconds)}s ago`
-      : lastSeenSeconds < 3600
-      ? `${Math.floor(lastSeenSeconds / 60)}m ago`
-      : `${Math.floor(lastSeenSeconds / 3600)}h ago`
-    : 'never';
-
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();
-  };
+  }, []);
 
-  const formatLocationTime = (date: Date) => {
+  const formatLocationTime = useCallback((date: Date) => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffSeconds = Math.floor(diffMs / 1000);
@@ -188,7 +191,18 @@ export default function DeviceDetailScreen() {
     } else {
       return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
     }
-  };
+  }, []);
+
+  const isDeviceOnline = deviceStatus?.online ?? false;
+  const lastSeenSeconds = deviceStatus?.seconds_since_seen;
+  
+  const lastSeenText = lastSeenSeconds != null 
+    ? lastSeenSeconds < 60
+      ? `${Math.floor(lastSeenSeconds)}s ago`
+      : lastSeenSeconds < 3600
+      ? `${Math.floor(lastSeenSeconds / 60)}m ago`
+      : `${Math.floor(lastSeenSeconds / 3600)}h ago`
+    : 'never';
 
   // Determine which coordinates to display
   const hasCurrentLocation = deviceStatus && deviceStatus.lat != null && 

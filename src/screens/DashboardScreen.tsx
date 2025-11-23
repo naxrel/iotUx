@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -54,6 +54,16 @@ export default function DashboardScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const isUnmountingRef = React.useRef(false);
+  const lastDataHashRef = React.useRef<string>('');
+
+  // Helper to hash data for change detection
+  const hashData = (data: any): string => {
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return String(data);
+    }
+  };
 
   const loadData = async () => {
     if (isUnmountingRef.current) return; // Don't start new requests if logging out
@@ -97,6 +107,9 @@ export default function DashboardScreen() {
 
       if (isUnmountingRef.current) return; // Don't update state if logged out
       
+      // Check if data has changed before updating state
+      const newDataHash = hashData({ userData, devicesData });
+      
       setUser(userData);
       setDevices(devicesData);
 
@@ -119,7 +132,23 @@ export default function DashboardScreen() {
       });
       
       if (isUnmountingRef.current) return; // Don't update state if logged out
-      setDeviceStatuses(statusMap);
+      
+      // Only update if data has actually changed
+      const currentDataHash = hashData({ userData, devicesData, statuses });
+      if (currentDataHash !== lastDataHashRef.current) {
+        lastDataHashRef.current = currentDataHash;
+        setDeviceStatuses(statusMap);
+        
+        // Cache data for offline use
+        try {
+          await AsyncStorage.multiSet([
+            ['@cached_devices', JSON.stringify(devicesData)],
+            ['@cached_user', JSON.stringify(userData)],
+          ]);
+        } catch (e) {
+          console.warn('Failed to cache data:', e);
+        }
+      }
     } catch (error: any) {
       if (isUnmountingRef.current) return; // Ignore errors if logging out
       // Only log non-auth errors
@@ -141,7 +170,7 @@ export default function DashboardScreen() {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  }, []);
+  }, [loadData]);
 
   useEffect(() => {
     // Subscribe to network changes
@@ -181,10 +210,18 @@ export default function DashboardScreen() {
         intervalRef.current = null;
       }
     };
-  }, [authChecked, isOnline, hasError]);
+  }, [authChecked, isOnline, hasError, loadData, router]);
 
-  const onlineDevices = devices.filter((d) => deviceStatuses.get(d.id)?.online);
-  const offlineDevices = devices.filter((d) => !deviceStatuses.get(d.id)?.online);
+  // Memoize device calculations to avoid recalculation on every render
+  const onlineDevices = useMemo(
+    () => devices.filter((d) => deviceStatuses.get(d.id)?.online),
+    [devices, deviceStatuses]
+  );
+  
+  const offlineDevices = useMemo(
+    () => devices.filter((d) => !deviceStatuses.get(d.id)?.online),
+    [devices, deviceStatuses]
+  );
 
   const handleAddDevice = async () => {
     if (!newDeviceId.trim() || !newDeviceName.trim()) {

@@ -14,10 +14,12 @@ export interface QueuedCommand {
 
 const QUEUE_KEY = '@command_queue';
 const MAX_RETRIES = 3;
+const SAVE_DEBOUNCE_MS = 500; // Debounce storage writes
 
 export class CommandQueue {
   private static queue: QueuedCommand[] = [];
   private static processing = false;
+  private static saveTimeout: NodeJS.Timeout | null = null;
 
   static async init() {
     try {
@@ -97,6 +99,11 @@ export class CommandQueue {
 
   static async clearQueue() {
     this.queue = [];
+    // Clear any pending save
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
     await AsyncStorage.removeItem(QUEUE_KEY);
   }
 
@@ -111,6 +118,29 @@ export class CommandQueue {
   }
 
   private static async saveQueue() {
+    // Clear existing timeout
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    
+    // Debounce the save operation
+    this.saveTimeout = setTimeout(async () => {
+      try {
+        await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(this.queue));
+        this.saveTimeout = null;
+      } catch (error) {
+        console.error('Failed to save command queue:', error);
+      }
+    }, SAVE_DEBOUNCE_MS);
+  }
+  
+  // Force immediate save (use for critical operations)
+  private static async saveQueueImmediate() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    
     try {
       await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(this.queue));
     } catch (error) {
