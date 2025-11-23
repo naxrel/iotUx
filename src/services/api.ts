@@ -8,7 +8,6 @@ const USER_DATA_KEY = '@iotux_user_data';
 // In-memory cache for auth token to avoid AsyncStorage reads on every request
 let cachedAuthToken: string | null = null;
 let tokenCachePromise: Promise<string | null> | null = null;
-let isInitializing = false;
 
 // Initialize token cache (singleton pattern to prevent race conditions)
 const initializeTokenCache = async (): Promise<string | null> => {
@@ -23,16 +22,13 @@ const initializeTokenCache = async (): Promise<string | null> => {
   }
   
   // Start initialization
-  isInitializing = true;
   tokenCachePromise = AsyncStorage.getItem(AUTH_TOKEN_KEY)
     .then(token => {
       cachedAuthToken = token;
-      isInitializing = false;
       return token;
     })
     .catch(err => {
       console.warn('Failed to initialize token cache:', err);
-      isInitializing = false;
       tokenCachePromise = null;
       return null;
     });
@@ -44,7 +40,6 @@ const initializeTokenCache = async (): Promise<string | null> => {
 const updateCachedToken = (token: string | null) => {
   cachedAuthToken = token;
   tokenCachePromise = null;
-  isInitializing = false;
 };
 
 // Start initialization on module load (won't block API calls)

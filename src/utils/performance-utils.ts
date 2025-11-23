@@ -27,7 +27,7 @@ export const hashData = (data: any): string => {
     const sortedKeys = Object.keys(data).sort();
     const pairs = sortedKeys.map(key => `${key}:${hashData(data[key])}`);
     return `{${pairs.join(',')}}`;
-  } catch (error) {
+  } catch {
     // Fallback for circular references or other errors
     // Use timestamp to ensure errors always trigger updates (safer for change detection)
     // This prevents stale data from being cached when hashing fails
