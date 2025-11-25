@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "326861802016",
+    "project_id": "iotpushnotifs",
+    "storage_bucket": "iotpushnotifs.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:326861802016:android:249492933fbaeee87f0a45",
+        "android_client_info": {
+          "package_name": "com.umbrosa.iotux"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdrzVxnRNzly8m28OlkBH45yMjpNN8M8U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

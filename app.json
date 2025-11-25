@@ -1,20 +1,32 @@
 {
   "expo": {
     "name": "TrackTard",
-    "slug": "iotux",
+    "slug": "iots",
     "icon": "./assets/icon.png",
     "scheme": "iotux",
     "extra": {
       "eas": {
-        "projectId": "24eaa5ab-fa1c-4ccd-9c0e-c08a3adee6af"
+        "projectId": "956342c5-46ee-48cb-a710-d701e66f1fe4"
       }
     },
     "android": {
       "package": "com.umbrosa.iotux",
+      "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       }
-    }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff"
+        }
+      ]
+    ]
   }
 }

@@ -143,6 +143,10 @@ export const authAPI = {
     // This prevents unnecessary API calls on app launch
     return true;
   },
+
+  syncPushToken: async (pushToken: string): Promise<void> => {
+    await api.post('/user/push-token', { token: pushToken });
+  },
 };
 
 // Device API

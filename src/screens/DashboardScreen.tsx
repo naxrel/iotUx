@@ -3,26 +3,27 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  RefreshControl,
-  StatusBar as RNStatusBar,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    RefreshControl,
+    StatusBar as RNStatusBar,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { AuroraWaves } from '../components/common/AuroraWaves';
 import { Card } from '../components/common/Card';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { BORDER_RADIUS, COLORS, FONT_SIZES, getThemedColors, SPACING } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { authAPI, Device, deviceAPI, DeviceCurrentStatus } from '../services/api';
 import { NetworkService } from '../utils/network-utils';
 
@@ -32,6 +33,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const themedColors = getThemedColors(isDark);
+  const { expoPushToken } = usePushNotifications();
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceStatuses, setDeviceStatuses] = useState<Map<string, DeviceCurrentStatus>>(
     new Map()
@@ -150,6 +152,21 @@ export default function DashboardScreen() {
     await loadData();
     setRefreshing(false);
   }, []);
+
+  // Sync push token with server
+  useEffect(() => {
+    const syncToken = async () => {
+      if (expoPushToken && user) {
+        try {
+          await authAPI.syncPushToken(expoPushToken);
+          console.log('✅ Push token synced with server');
+        } catch (e) {
+          console.log('❌ Failed to sync token', e);
+        }
+      }
+    };
+    syncToken();
+  }, [expoPushToken, user]);
 
   useEffect(() => {
     // Subscribe to network changes
